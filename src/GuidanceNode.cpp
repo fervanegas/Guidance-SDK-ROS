@@ -29,6 +29,9 @@ ros::Publisher obstacle_distance_pub;
 ros::Publisher velocity_pub;
 ros::Publisher ultrasonic_pub;
 
+//adding a publisher for odometry (pose and velocity)
+ros::Publisher motion_pub;
+
 using namespace cv;
 
 #define WIDTH 320
@@ -76,7 +79,7 @@ int my_callback(int data_type, int data_len, char *content)
     g_lock.enter();
 
     /* image data */
-    if (e_image == data_type && NULL != content)
+   /* if (e_image == data_type && NULL != content)
     {        
         image_data* data = (image_data*)content;
 
@@ -122,7 +125,7 @@ int my_callback(int data_type, int data_len, char *content)
 		}
 		
         key = waitKey(1);
-    }
+    }*/
 
     /* imu */
     if ( e_imu == data_type && NULL != content )
@@ -214,6 +217,22 @@ int my_callback(int data_type, int data_len, char *content)
 		ultrasonic_pub.publish(g_ul);
     }
 
+    /* motion (odometry) pose and velocity */
+    if ( e_motion == data_type && NULL != content )
+    {
+	motion *motion_d = (motion*)content;
+	if (verbosity > 1) {
+            printf( "frame index: %d, stamp: %d\n", motion_d->frame_index, motion_d->time_stamp );
+       	printf( "Attitude q0= %f, q1= %f, q2= %f, q3= %f\n", motion_d->q0, motion_d->q1, motion_d->q2, motion_d->q3);
+	printf( "Attitude status: %d\n", motion_d->attitude_status);
+        printf( "Position x= %f, y= %f, z=%f\n", motion_d->position_in_global_x, motion_d->position_in_global_y, motion_d->position_in_global_z );
+	printf( "Position status: %d\n", motion_d->position_status);
+	printf( "Velocity Vx= %f, Vy= %f, Vz= %f\n", motion_d->velocity_in_global_x, motion_d->velocity_in_global_y, motion_d->velocity_in_global_z );
+	printf( "Velocity status: %d\n", motion_d->velocity_status);
+        }
+
+    }
+
     g_lock.leave();
     g_event.set_event();
 
@@ -284,6 +303,7 @@ int main(int argc, char** argv)
     select_ultrasonic();
     select_obstacle_distance();
     select_velocity();
+    select_motion();
     /* start data transfer */
     err_code = set_sdk_event_handler(my_callback);
     RETURN_IF_ERR(err_code);
@@ -346,6 +366,7 @@ int main(int argc, char** argv)
                 select_ultrasonic();
                 select_obstacle_distance();
                 select_velocity();
+		select_motion();
 
 				err_code = start_transfer();
 				RETURN_IF_ERR(err_code);
